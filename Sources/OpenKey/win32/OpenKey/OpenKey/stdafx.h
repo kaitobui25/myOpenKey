@@ -85,4 +85,5 @@ extern int vCheckNewVersion;
 extern int vRememberCode;
 extern int vOtherLanguage;
 extern int vTempOffOpenKey;
+extern int vWasAutoSwitchedByIme;
 extern int vFixChromiumBrowser;

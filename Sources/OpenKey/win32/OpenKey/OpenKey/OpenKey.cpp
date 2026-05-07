@@ -496,11 +496,28 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 	
-	//ignore if IME pad is open when typing Japanese/Chinese...
+	//check IME status and Keyboard Layout
 	HWND hWnd = GetForegroundWindow();
 	HWND hIME = ImmGetDefaultIMEWnd(hWnd);
 	LRESULT isImeON = SendMessage(hIME, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0);
-	if (isImeON) {
+
+	HKL hkl = GetKeyboardLayout(GetWindowThreadProcessId(hWnd, NULL));
+	bool isJapaneseLayout = ((LOWORD(hkl) & 0xFF) == 0x11);
+
+	// Auto switch to English when Japanese mode is detected
+	if ((isImeON || isJapaneseLayout) && vLanguage == 1) {
+		vLanguage = 0;
+		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+		vWasAutoSwitchedByIme = 1;
+	}
+	// Auto restore to Vietnamese when Japanese mode is turned off
+	else if (!isImeON && !isJapaneseLayout && vLanguage == 0 && vWasAutoSwitchedByIme) {
+		vLanguage = 1;
+		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+		vWasAutoSwitchedByIme = 0;
+	}
+
+	if (isImeON || isJapaneseLayout) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 	
@@ -523,6 +540,7 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 			if (GET_SWITCH_KEY(vSwitchKeyStatus) == _keycode && checkHotKey(vSwitchKeyStatus, GET_SWITCH_KEY(vSwitchKeyStatus) != 0xFE)) {
 				switchLanguage();
 				_hasJustUsedHotKey = true;
+				vWasAutoSwitchedByIme = 0;
 				_keycode = 0;
 				return -1;
 			}
@@ -542,6 +560,7 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 			if (checkHotKey(vSwitchKeyStatus, GET_SWITCH_KEY(vSwitchKeyStatus) != 0xFE)) {
 				switchLanguage();
 				_hasJustUsedHotKey = true;
+				vWasAutoSwitchedByIme = 0;
 			}
 			if (checkHotKey(convertToolHotKey, GET_SWITCH_KEY(convertToolHotKey) != 0xFE)) {
 				AppDelegate::getInstance()->onQuickConvert();
@@ -687,6 +706,7 @@ VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, H
 				saveSmartSwitchKeyData();
 			}
 		}
+		vWasAutoSwitchedByIme = 0;
 		startNewSession();
 		if (vRememberCode && (_languageTemp >> 1) != vCodeTable) { //for remember table code feature
 			if (_languageTemp != -1) {
