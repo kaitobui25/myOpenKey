@@ -496,28 +496,25 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 	
-	//check IME status and Keyboard Layout
+	//check IME status
 	HWND hWnd = GetForegroundWindow();
 	HWND hIME = ImmGetDefaultIMEWnd(hWnd);
 	LRESULT isImeON = SendMessage(hIME, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0);
 
-	HKL hkl = GetKeyboardLayout(GetWindowThreadProcessId(hWnd, NULL));
-	bool isJapaneseLayout = ((LOWORD(hkl) & 0xFF) == 0x11);
-
 	// Auto switch to English when Japanese mode is detected
-	if ((isImeON || isJapaneseLayout) && vLanguage == 1) {
+	if (isImeON && vLanguage == 1) {
 		vLanguage = 0;
 		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
 		vWasAutoSwitchedByIme = 1;
 	}
 	// Auto restore to Vietnamese when Japanese mode is turned off
-	else if (!isImeON && !isJapaneseLayout && vLanguage == 0 && vWasAutoSwitchedByIme) {
+	else if (!isImeON && vLanguage == 0 && vWasAutoSwitchedByIme) {
 		vLanguage = 1;
 		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
 		vWasAutoSwitchedByIme = 0;
 	}
 
-	if (isImeON || isJapaneseLayout) {
+	if (isImeON) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 	
