@@ -11,6 +11,9 @@
     - Tôi đã chỉnh sửa lại thuật toán kiểm tra chính tả (hàm `checkSpelling` trong file `Engine.cpp`): Áp dụng kỹ thuật "Loose Match" để kiểm tra các tổ hợp nguyên âm ngay trong lúc đang gõ.
     - **Lợi ích:** Với các từ tiếng Anh chứa tổ hợp nguyên âm vô lý trong tiếng Việt (ví dụ `ea` trong chữ `search`), bộ gõ sẽ tự động phán đoán và **nhả ngay chữ tiếng Anh (sear)** trong thời gian thực, thay vì cố bỏ dấu sai (sẻa) rồi đợi phím Space mới sửa lại như bản gốc.
     - *Lưu ý:* Những từ tiếng Anh chứa tiền tố hợp lệ trong tiếng Việt (như `ie` trong `chief`) vẫn sẽ tuân theo luật gõ dấu tự do của bộ gõ (tạm biến thành `chiè`) và tự động khôi phục thành `chief` khi bấm phím Cách (Space).
+- **Ưu tiên tiếng Anh khi gõ mã/số (Alphanumeric English Priority):**
+    - Sửa lại bộ lọc đầu vào của engine để không còn coi số đầu tiên là ký tự ngắt từ (Word Break).
+    - **Lợi ích:** Giải quyết triệt để lỗi khó chịu khi gõ các chuỗi mã hay serial như `8WC5123` (bị biến thành `8ƯC...`) hoặc `3D` (bị biến thành `3Đ`). Giờ đây, khi bạn gõ bất kỳ số nào xen lẫn chữ cái, nó sẽ tự động nhận diện đó là mã tiếng Anh/số và ngừng bỏ dấu hoàn toàn.
 - **Giao diện icon cá nhân hóa:**
     - Chế độ **Tiếng Việt (V)**: Icon chữ V được đổi sang màu **Tím (Purple)**.
     - Chế độ **Tiếng Anh (E)**: Icon chữ E được đổi sang màu **Xanh lá cây (Green)**.

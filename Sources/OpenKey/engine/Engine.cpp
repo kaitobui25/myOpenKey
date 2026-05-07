@@ -1333,7 +1333,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
     _isCaps = (capsStatus == 1 || //shift
                capsStatus == 2); //caps lock
     if ((IS_NUMBER_KEY(data) && capsStatus == 1)
-        || otherControlKey || isWordBreak(event, state, data) || (_index == 0 && IS_NUMBER_KEY(data))) {
+        || otherControlKey || isWordBreak(event, state, data)) {
         hCode = vDoNothing;
         hBPC = 0;
         hNCC = 0;
