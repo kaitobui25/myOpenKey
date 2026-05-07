@@ -1,5 +1,20 @@
+# OpenKey - Custom Build by kaitobui25
 
-# [OpenKey](http://open-key.org)
+Đây là bản build cá nhân của OpenKey (Win32) với các tính năng tùy chỉnh riêng biệt để tối ưu hóa trải nghiệm gõ phím đa ngôn ngữ.
+
+### 🚀 Các tính năng bổ sung trong bản build này:
+- **Hỗ trợ IME Nhật Bản thông minh (Windows 11):** 
+    - **Auto-Switch:** Tự động chuyển OpenKey sang chế độ gõ **Tiếng Anh (E)** ngay khi bạn bật chế độ gõ tiếng Nhật (Hiragana) bằng phím `CapsLock` hoặc thao tác chuột.
+    - **Auto-Restore:** Tự động khôi phục lại chế độ gõ **Tiếng Việt (V)** khi bạn tắt chế độ gõ tiếng Nhật.
+    - **Lợi ích:** Loại bỏ hoàn toàn lỗi gạch chân, mất ký tự hoặc xung đột phím khi gõ tiếng Nhật mà quên tắt bộ gõ tiếng Việt.
+- **Giao diện icon cá nhân hóa:**
+    - Chế độ **Tiếng Việt (V)**: Icon chữ V được đổi sang màu **Tím (Purple)**.
+    - Chế độ **Tiếng Anh (E)**: Icon chữ E được đổi sang màu **Xanh lá cây (Green)**.
+    - Giúp người dùng dễ dàng nhận diện phiên bản tùy chỉnh này trên khay hệ thống.
+
+---
+
+# [Bản Gốc] OpenKey (http://open-key.org)
 ### [Download bản mới nhất](https://github.com/tuyenvm/OpenKey/releases)
 [![GitHub release](https://img.shields.io/github/v/release/tuyenvm/OpenKey.svg)](https://github.com/tuyenvm/OpenKey/releases/latest)
 
