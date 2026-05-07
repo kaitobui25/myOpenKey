@@ -229,18 +229,32 @@ void checkSpelling(const bool& forceCheckVowel=false) {
         if (k > j) { //has vowel,
             _spellingVowelOK = false;
             //check correct combined vowel
-            if (k - j > 1 && forceCheckVowel) {
+            if (k - j > 1) {
                 vector<vector<Uint32>>& vowelSet = _vowelCombine[CHR(j)];
                 for (l = 0; l < vowelSet.size(); l++) {
                     _spellingFlag = false;
                     for (ii = 1; ii < vowelSet[l].size(); ii++) {
-                        if (j + ii - 1 < _spellingEndIndex && vowelSet[l][ii] != ((CHR(j + ii - 1) | (TypingWord[j + ii - 1] & TONEW_MASK) | (TypingWord[j + ii - 1] & TONE_MASK)))) {
-                            _spellingFlag = true;
-                            break;
+                        if (j + ii - 1 < _spellingEndIndex) {
+                            Uint32 expected = vowelSet[l][ii];
+                            Uint32 actual = (CHR(j + ii - 1) | (TypingWord[j + ii - 1] & TONEW_MASK) | (TypingWord[j + ii - 1] & TONE_MASK));
+                            if (!forceCheckVowel) {
+                                // Loose match: ignore tones while typing
+                                expected &= ~(TONE_MASK | TONEW_MASK);
+                                actual &= ~(TONE_MASK | TONEW_MASK);
+                            }
+                            if (expected != actual) {
+                                _spellingFlag = true;
+                                break;
+                            }
                         }
                     }
-                    if (_spellingFlag || (k < _spellingEndIndex && !vowelSet[l][0]) || (j + ii - 1 < _spellingEndIndex && !IS_CONSONANT(CHR(j + ii - 1))))
+                    if (_spellingFlag)
                         continue;
+                    
+                    if (forceCheckVowel) {
+                        if ((k < _spellingEndIndex && !vowelSet[l][0]) || (j + ii - 1 < _spellingEndIndex && !IS_CONSONANT(CHR(j + ii - 1))))
+                            continue;
+                    }
                     
                     _spellingVowelOK = true;
                     break;
