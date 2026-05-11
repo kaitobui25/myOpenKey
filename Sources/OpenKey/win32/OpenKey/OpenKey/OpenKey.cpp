@@ -511,6 +511,7 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 	else if (!isImeON && vLanguage == 0 && vWasAutoSwitchedByIme) {
 		vLanguage = 1;
 		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+		startNewSession();
 		vWasAutoSwitchedByIme = 0;
 	}
 
