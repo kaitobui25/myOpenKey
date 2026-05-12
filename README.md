@@ -3,7 +3,11 @@
 Đây là bản build cá nhân của OpenKey (Win32) với các tính năng tùy chỉnh riêng biệt để tối ưu hóa trải nghiệm gõ phím đa ngôn ngữ.
 
 ### 🚀 Các tính năng bổ sung trong bản build này:
-- **Hỗ trợ IME Nhật Bản thông minh (Windows 11):** 
+- **Hỗ trợ IME Nhật Bản thông minh (Windows 10/11):** 
+    - **Auto-Switch:** Tự động chuyển OpenKey sang chế độ gõ **Tiếng Anh (E)** ngay khi bạn bật chế độ gõ tiếng Nhật (Hiragana) bằng phím CapsLock hoặc thao tác chuột.
+    - **Tương thích ứng dụng hiện đại:** Cải tiến thuật toán sử dụng GetGUIThreadInfo và Keyboard Layout (0x0411) để hoạt động chính xác trên các ứng dụng đa tiến trình như **Microsoft Teams**, Discord, VS Code.
+    - **Auto-Restore:** Tự động khôi phục lại chế độ gõ **Tiếng Việt (V)** khi bạn tắt chế độ gõ tiếng Nhật hoặc chuyển về bàn phím ngôn ngữ khác.
+    - **Lợi ích:** Loại bỏ hoàn toàn lỗi gạch chân, mất ký tự hoặc xung đột phím khi gõ tiếng Nhật mà quên tắt bộ gõ tiếng Việt, ngay cả khi dùng CapsLock để chuyển chế độ bên trong IME Nhật.
     - **Auto-Switch:** Tự động chuyển OpenKey sang chế độ gõ **Tiếng Anh (E)** ngay khi bạn bật chế độ gõ tiếng Nhật (Hiragana) bằng phím `CapsLock` hoặc thao tác chuột.
     - **Auto-Restore:** Tự động khôi phục lại chế độ gõ **Tiếng Việt (V)** khi bạn tắt chế độ gõ tiếng Nhật.
     - **Lợi ích:** Loại bỏ hoàn toàn lỗi gạch chân, mất ký tự hoặc xung đột phím khi gõ tiếng Nhật mà quên tắt bộ gõ tiếng Việt.

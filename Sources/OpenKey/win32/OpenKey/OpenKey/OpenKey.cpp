@@ -498,24 +498,36 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 	
 	//check IME status
 	HWND hWnd = GetForegroundWindow();
+	DWORD threadId = GetWindowThreadProcessId(hWnd, NULL);
+	GUITHREADINFO gti;
+	gti.cbSize = sizeof(GUITHREADINFO);
+	if (GetGUIThreadInfo(threadId, &gti) && gti.hwndFocus) {
+		hWnd = gti.hwndFocus;
+	}
+
 	HWND hIME = ImmGetDefaultIMEWnd(hWnd);
 	LRESULT isImeON = SendMessage(hIME, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0);
 
-	// Auto switch to English when Japanese mode is detected
-	if (isImeON && vLanguage == 1) {
+	// Improved detection for Japanese IME using Keyboard Layout (fixes Teams/modern apps)
+	HKL hkl = GetKeyboardLayout(threadId);
+	bool isJapanese = (LOWORD(hkl) == 0x0411);
+
+	// Auto switch to English when Japanese mode is detected or Japanese HKL is active
+	// This ensures OpenKey doesn't interfere with Japanese IME, including when using CapsLock to toggle modes.
+	if ((isImeON || isJapanese) && vLanguage == 1) {
 		vLanguage = 0;
 		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
 		vWasAutoSwitchedByIme = 1;
 	}
-	// Auto restore to Vietnamese when Japanese mode is turned off
-	else if (!isImeON && vLanguage == 0 && vWasAutoSwitchedByIme) {
+	// Auto restore to Vietnamese when Japanese mode is turned off AND it's not Japanese HKL anymore
+	else if (!isImeON && !isJapanese && vLanguage == 0 && vWasAutoSwitchedByIme) {
 		vLanguage = 1;
 		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
 		startNewSession();
 		vWasAutoSwitchedByIme = 0;
 	}
 
-	if (isImeON) {
+	if (isImeON || isJapanese) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 	
