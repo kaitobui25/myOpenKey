@@ -86,4 +86,7 @@ extern int vRememberCode;
 extern int vOtherLanguage;
 extern int vTempOffOpenKey;
 extern int vWasAutoSwitchedByIme;
+extern int vUserOverrodeImeAutoSwitch;
 extern int vFixChromiumBrowser;
+
+void notifyManualLanguageChoice();

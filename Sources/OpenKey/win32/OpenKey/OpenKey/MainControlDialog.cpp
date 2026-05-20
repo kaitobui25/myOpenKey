@@ -434,6 +434,7 @@ void MainControlDialog::onCheckboxClicked(const HWND& hWnd) {
     else if (hWnd == checkVietnamese) {
         val = (int)SendMessage(checkVietnamese, BM_GETCHECK, 0, 0);
         APP_SET_DATA(vLanguage, val ? 1 : 0);
+        notifyManualLanguageChoice();
         if (vUseSmartSwitchKey) {
             setAppInputMethodStatus(OpenKeyHelper::getFrontMostAppExecuteName(), vLanguage | (vCodeTable << 1));
             saveSmartSwitchKeyData();
@@ -442,6 +443,7 @@ void MainControlDialog::onCheckboxClicked(const HWND& hWnd) {
     else if (hWnd == checkEnglish) {
         val = (int)SendMessage(checkVietnamese, BM_GETCHECK, 0, 0);
         APP_SET_DATA(vLanguage, val ? 1 : 0);
+        notifyManualLanguageChoice();
         if (vUseSmartSwitchKey) {
             setAppInputMethodStatus(OpenKeyHelper::getFrontMostAppExecuteName(), vLanguage | (vCodeTable << 1));
             saveSmartSwitchKeyData();

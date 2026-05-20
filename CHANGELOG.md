@@ -2,6 +2,13 @@
 
 ##### OpenKey for Linux: (in development)
 
+##### Custom Build Win32 2.0.3: (20/05/2026) — kaitobui25 fork
+- **Fix IME Japanese (Windows 10/11):** Resolved intermittent “stuck on English (E)” in Outlook, Microsoft Teams, Opera, and similar apps when Japanese IME reports open.
+  - Language hotkeys (e.g. **Ctrl+Shift**) are processed **before** the IME bypass, so E/V can always be toggled even while IME is active.
+  - Auto-switch to **E** on Hiragana now runs only when IME **turns on** (edge-triggered), not on every keystroke while IME stays open.
+  - Manual choice of **V** (hotkey, tray, or settings) is remembered until IME is fully off (`Win+Space` / disable Hiragana); no longer overridden on the next key press.
+  - Telex/VNI processing remains disabled while IME is active to avoid conflicts with Japanese input.
+
 ##### Version 1.2 RC5: (26/08/2019)
 - Sửa lỗi không gõ được chữ "quởn".
 - Không kiểm tra chính tả khi sử dụng dấu "[ ] { }".
@@ -104,6 +111,13 @@ Sửa vài lỗi nho nhỏ khác.
 
 
 # OpenKey lịch sử
+
+##### Bản tùy chỉnh Win32 2.0.3: (20/05/2026) — fork kaitobui25
+- **Sửa lỗi IME tiếng Nhật (Windows 10/11):** Khắc phục lỗi thỉnh thoảng **kẹt chế độ Tiếng Anh (E)** trong Outlook, Microsoft Teams, Opera và các app tương tự khi Japanese IME đang báo bật.
+  - Phím tắt đổi E/V (ví dụ **Ctrl+Shift**) được xử lý **trước** khi hook bỏ qua IME — luôn chuyển được E/V kể cả khi IME đang mở.
+  - Tự chuyển sang **E** khi bật Hiragana chỉ chạy khi IME **vừa bật** (cạnh trạng thái), không còn ép E trên mỗi phím khi IME vẫn mở.
+  - Khi người dùng **chủ động chọn V** (phím tắt, tray, cài đặt), giữ V cho đến khi IME tắt hẳn (`Win+Space` / tắt Hiragana); không bị gõ phím tiếp theo kéo lại E.
+  - Vẫn tắt xử lý Telex/VNI khi IME mở để tránh xung đột với gõ tiếng Nhật.
 
 ##### Version 1.0.17: (31/07/2019)
 - Thêm chế độ Simple Telex.

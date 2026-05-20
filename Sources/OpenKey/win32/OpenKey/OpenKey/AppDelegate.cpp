@@ -41,6 +41,7 @@ int vOtherLanguage = 1;
 int vRememberCode = 1;
 int vTempOffOpenKey = 0;
 int vWasAutoSwitchedByIme = 0;
+int vUserOverrodeImeAutoSwitch = 0;
 
 int vUseGrayIcon = 0;
 int vShowOnStartUp = 0;
@@ -199,6 +200,7 @@ void AppDelegate::onDefaultConfig() {
 	APP_SET_DATA(vTempOffOpenKey, 0);
 	APP_SET_DATA(vFixChromiumBrowser, 0);
 	vWasAutoSwitchedByIme = 0;
+	vUserOverrodeImeAutoSwitch = 0;
 
 	if (mainDialog) {
 		mainDialog->fillData();
@@ -208,7 +210,7 @@ void AppDelegate::onDefaultConfig() {
 
 void AppDelegate::onToggleVietnamese() {
 	APP_SET_DATA(vLanguage, vLanguage ? 0 : 1);
-	vWasAutoSwitchedByIme = 0;
+	notifyManualLanguageChoice();
 	if (mainDialog) {
 		mainDialog->fillData();
 	}

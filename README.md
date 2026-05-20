@@ -3,14 +3,13 @@
 Đây là bản build cá nhân của OpenKey (Win32) với các tính năng tùy chỉnh riêng biệt để tối ưu hóa trải nghiệm gõ phím đa ngôn ngữ.
 
 ### 🚀 Các tính năng bổ sung trong bản build này:
-- **Hỗ trợ IME Nhật Bản thông minh (Windows 10/11):** 
-    - **Auto-Switch:** Tự động chuyển OpenKey sang chế độ gõ **Tiếng Anh (E)** ngay khi bạn bật chế độ gõ tiếng Nhật (Hiragana) bằng phím CapsLock hoặc thao tác chuột.
-    - **Tương thích ứng dụng hiện đại:** Cải tiến thuật toán sử dụng GetGUIThreadInfo và Keyboard Layout (0x0411) để hoạt động chính xác trên các ứng dụng đa tiến trình như **Microsoft Teams**, Discord, VS Code.
-    - **Auto-Restore:** Tự động khôi phục lại chế độ gõ **Tiếng Việt (V)** khi bạn tắt chế độ gõ tiếng Nhật hoặc chuyển về bàn phím ngôn ngữ khác.
-    - **Lợi ích:** Loại bỏ hoàn toàn lỗi gạch chân, mất ký tự hoặc xung đột phím khi gõ tiếng Nhật mà quên tắt bộ gõ tiếng Việt, ngay cả khi dùng CapsLock để chuyển chế độ bên trong IME Nhật.
-    - **Auto-Switch:** Tự động chuyển OpenKey sang chế độ gõ **Tiếng Anh (E)** ngay khi bạn bật chế độ gõ tiếng Nhật (Hiragana) bằng phím `CapsLock` hoặc thao tác chuột.
-    - **Auto-Restore:** Tự động khôi phục lại chế độ gõ **Tiếng Việt (V)** khi bạn tắt chế độ gõ tiếng Nhật.
-    - **Lợi ích:** Loại bỏ hoàn toàn lỗi gạch chân, mất ký tự hoặc xung đột phím khi gõ tiếng Nhật mà quên tắt bộ gõ tiếng Việt.
+- **Hỗ trợ IME Nhật Bản thông minh (Windows 10/11):**
+    - **Auto-Switch:** Tự động chuyển OpenKey sang **Tiếng Anh (E)** khi **bật** chế độ gõ tiếng Nhật (Hiragana) — chỉ khi IME vừa chuyển sang trạng thái mở, không ép E trên mỗi phím.
+    - **Auto-Restore:** Tự động khôi phục **Tiếng Việt (V)** khi tắt Hiragana / IME (sau khi đã auto-chuyển E).
+    - **Tương thích ứng dụng hiện đại:** Dùng `GetGUIThreadInfo` để lấy đúng ô nhập focus trên **Microsoft Teams**, Outlook, Opera, VS Code, v.v.
+    - **Phím tắt E/V luôn hoạt động:** Ctrl+Shift (hoặc phím tắt tùy chỉnh) và menu tray vẫn đổi E/V được khi IME đang mở; lựa chọn **V** thủ công được giữ cho đến khi IME tắt hẳn.
+    - **Lợi ích:** Giảm xung đột gõ tiếng Nhật với Telex/VNI; sửa lỗi kẹt E trong Outlook/Teams khi IME báo bật nhầm (v2.0.3).
+    - *Gõ tiếng Việt có dấu trong ô đang dùng IME Nhật:* vẫn nên `Win+Space` sang English hoặc tắt Hiragana trước khi gõ.
 - **Phán đoán tiếng Anh thông minh (Proactive English Detection):**
     - Tôi đã chỉnh sửa lại thuật toán kiểm tra chính tả (hàm `checkSpelling` trong file `Engine.cpp`): Áp dụng kỹ thuật "Loose Match" để kiểm tra các tổ hợp nguyên âm ngay trong lúc đang gõ.
     - **Lợi ích:** Với các từ tiếng Anh chứa tổ hợp nguyên âm vô lý trong tiếng Việt (ví dụ `ea` trong chữ `search`), bộ gõ sẽ tự động phán đoán và **nhả ngay chữ tiếng Anh (sear)** trong thời gian thực, thay vì cố bỏ dấu sai (sẻa) rồi đợi phím Space mới sửa lại như bản gốc.

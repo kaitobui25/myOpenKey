@@ -63,6 +63,7 @@ static int _languageTemp = 0; //use for smart switch key
 static vector<Byte> savedSmartSwitchKeyData; ////use for smart switch key
 
 static bool _hasJustUsedHotKey = false;
+static bool _prevImeON = false;
 
 static INPUT backspaceEvent[2];
 static INPUT keyEvent[2];
@@ -126,6 +127,7 @@ void OpenKeyInit() {
 	}
 
 	pData = (vKeyHookState*)vKeyInit();
+	_prevImeON = false;
 
 	//pre-create back key
 	backspaceEvent[0].type = INPUT_KEYBOARD;
@@ -398,11 +400,21 @@ bool checkHotKey(int hotKeyData, bool checkKeyCode = true) {
 	return true;
 }
 
+void notifyManualLanguageChoice() {
+	if (vLanguage == 1) {
+		vUserOverrodeImeAutoSwitch = 1;
+		vWasAutoSwitchedByIme = 0;
+	} else {
+		vUserOverrodeImeAutoSwitch = 0;
+	}
+}
+
 void switchLanguage() {
 	if (vLanguage == 0)
 		vLanguage = 1;
 	else
 		vLanguage = 0;
+	notifyManualLanguageChoice();
 	if (HAS_BEEP(vSwitchKeyStatus))
 		MessageBeep(MB_OK);
 	AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
@@ -411,6 +423,84 @@ void switchLanguage() {
 		saveSmartSwitchKeyData();
 	}
 	startNewSession();
+}
+
+static bool queryImeOpenStatus() {
+	HWND hWnd = GetForegroundWindow();
+	DWORD threadId = GetWindowThreadProcessId(hWnd, NULL);
+	GUITHREADINFO gti;
+	gti.cbSize = sizeof(GUITHREADINFO);
+	if (GetGUIThreadInfo(threadId, &gti) && gti.hwndFocus) {
+		hWnd = gti.hwndFocus;
+	}
+	HWND hIME = ImmGetDefaultIMEWnd(hWnd);
+	if (!hIME) {
+		return false;
+	}
+	return SendMessage(hIME, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0) != 0;
+}
+
+static void updateImeAutoLanguage(const bool& isImeON) {
+	if (isImeON && !_prevImeON && vLanguage == 1 && !vUserOverrodeImeAutoSwitch) {
+		vLanguage = 0;
+		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+		vWasAutoSwitchedByIme = 1;
+	} else if (!isImeON && _prevImeON && vLanguage == 0 && vWasAutoSwitchedByIme) {
+		vLanguage = 1;
+		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
+		startNewSession();
+		vWasAutoSwitchedByIme = 0;
+	}
+	if (!isImeON) {
+		vUserOverrodeImeAutoSwitch = 0;
+	}
+	_prevImeON = isImeON;
+}
+
+// Returns true when the hook should consume the key event (return -1).
+static bool tryProcessLanguageHotkeys(const WPARAM& wParam) {
+	if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && !_isFlagKey && _keycode != 0) {
+		if (GET_SWITCH_KEY(vSwitchKeyStatus) != _keycode && GET_SWITCH_KEY(convertToolHotKey) != _keycode) {
+			_lastFlag = 0;
+		} else {
+			if (GET_SWITCH_KEY(vSwitchKeyStatus) == _keycode && checkHotKey(vSwitchKeyStatus, GET_SWITCH_KEY(vSwitchKeyStatus) != 0xFE)) {
+				switchLanguage();
+				_hasJustUsedHotKey = true;
+				_keycode = 0;
+				return true;
+			}
+			if (GET_SWITCH_KEY(convertToolHotKey) == _keycode && checkHotKey(convertToolHotKey, GET_SWITCH_KEY(convertToolHotKey) != 0xFE)) {
+				AppDelegate::getInstance()->onQuickConvert();
+				_hasJustUsedHotKey = true;
+				_keycode = 0;
+				return true;
+			}
+		}
+		_hasJustUsedHotKey = _lastFlag != 0;
+	} else if (_isFlagKey) {
+		if (_lastFlag == 0 || _lastFlag < _flag)
+			_lastFlag = _flag;
+		else if (_lastFlag > _flag) {
+			if (checkHotKey(vSwitchKeyStatus, GET_SWITCH_KEY(vSwitchKeyStatus) != 0xFE)) {
+				switchLanguage();
+				_hasJustUsedHotKey = true;
+			}
+			if (checkHotKey(convertToolHotKey, GET_SWITCH_KEY(convertToolHotKey) != 0xFE)) {
+				AppDelegate::getInstance()->onQuickConvert();
+				_hasJustUsedHotKey = true;
+			}
+			if (vTempOffSpelling && !_hasJustUsedHotKey && _lastFlag & MASK_CONTROL) {
+				vTempOffSpellChecking();
+			}
+			if (vTempOffOpenKey && !_hasJustUsedHotKey && _lastFlag & MASK_ALT) {
+				vTempOffEngine();
+			}
+			_lastFlag = _flag;
+			_hasJustUsedHotKey = false;
+		}
+		_keycode = 0;
+	}
+	return false;
 }
 
 static void SendPureCharacter(const Uint16& ch) {
@@ -495,94 +585,28 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 	if (keyboardData->dwExtraInfo != 0) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
-	
-	//check IME status
-	HWND hWnd = GetForegroundWindow();
-	DWORD threadId = GetWindowThreadProcessId(hWnd, NULL);
-	GUITHREADINFO gti;
-	gti.cbSize = sizeof(GUITHREADINFO);
-	if (GetGUIThreadInfo(threadId, &gti) && gti.hwndFocus) {
-		hWnd = gti.hwndFocus;
-		threadId = GetWindowThreadProcessId(hWnd, NULL);
-	}
 
-	HWND hIME = ImmGetDefaultIMEWnd(hWnd);
-	LRESULT isImeON = SendMessage(hIME, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0);
-
-	// Auto switch to English when Japanese mode (Hiragana/Katakana) is detected
-	if (isImeON && vLanguage == 1) {
-		vLanguage = 0;
-		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
-		vWasAutoSwitchedByIme = 1;
-	}
-	// Auto restore to Vietnamese when Japanese mode is turned off
-	else if (!isImeON && vLanguage == 0 && vWasAutoSwitchedByIme) {
-		vLanguage = 1;
-		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
-		startNewSession();
-		vWasAutoSwitchedByIme = 0;
-	}
-
-	if (isImeON) {
-		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
-	}
-	
-	//check modifier key
 	if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
-		//LOG(L"Key down: %d\n", keyboardData->vkCode);
 		SetModifierMask((Uint16)keyboardData->vkCode);
 	} else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
-		//LOG(L"Key up: %d\n", keyboardData->vkCode);
 		UnsetModifierMask((Uint16)keyboardData->vkCode);
 	}
 	if (!_isFlagKey && wParam != WM_KEYUP && wParam != WM_SYSKEYUP)
 		_keycode = (Uint16)keyboardData->vkCode;
 
-	//switch language shortcut; convert hotkey
-	if ((wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) && !_isFlagKey && _keycode != 0) {
-		if (GET_SWITCH_KEY(vSwitchKeyStatus) != _keycode && GET_SWITCH_KEY(convertToolHotKey) != _keycode) {
-			_lastFlag = 0;
-		} else {
-			if (GET_SWITCH_KEY(vSwitchKeyStatus) == _keycode && checkHotKey(vSwitchKeyStatus, GET_SWITCH_KEY(vSwitchKeyStatus) != 0xFE)) {
-				switchLanguage();
-				_hasJustUsedHotKey = true;
-				vWasAutoSwitchedByIme = 0;
-				_keycode = 0;
-				return -1;
-			}
-			if (GET_SWITCH_KEY(convertToolHotKey) == _keycode && checkHotKey(convertToolHotKey, GET_SWITCH_KEY(convertToolHotKey) != 0xFE)) {
-				AppDelegate::getInstance()->onQuickConvert();
-				_hasJustUsedHotKey = true;
-				_keycode = 0;
-				return -1;
-			}
-		}
-		_hasJustUsedHotKey = _lastFlag != 0;
-	} else if (_isFlagKey) {
-		if (_lastFlag == 0 || _lastFlag < _flag)
-			_lastFlag = _flag;
-		else if (_lastFlag > _flag) {
-			//check switch
-			if (checkHotKey(vSwitchKeyStatus, GET_SWITCH_KEY(vSwitchKeyStatus) != 0xFE)) {
-				switchLanguage();
-				_hasJustUsedHotKey = true;
-				vWasAutoSwitchedByIme = 0;
-			}
-			if (checkHotKey(convertToolHotKey, GET_SWITCH_KEY(convertToolHotKey) != 0xFE)) {
-				AppDelegate::getInstance()->onQuickConvert();
-				_hasJustUsedHotKey = true;
-			}
-			//check temporarily turn off spell checking
-			if (vTempOffSpelling && !_hasJustUsedHotKey && _lastFlag & MASK_CONTROL) {
-				vTempOffSpellChecking();
-			}
-			if (vTempOffOpenKey && !_hasJustUsedHotKey && _lastFlag & MASK_ALT) {
-				vTempOffEngine();
-			}
-			_lastFlag = _flag;
-			_hasJustUsedHotKey = false;
-		}
-		_keycode = 0;
+	// Language hotkeys must run before IME bypass (IME ON used to block Ctrl+Shift entirely).
+	if (tryProcessLanguageHotkeys(wParam)) {
+		return -1;
+	}
+	if (_isFlagKey) {
+		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
+	}
+
+	const bool isImeON = queryImeOpenStatus();
+	updateImeAutoLanguage(isImeON);
+
+	// While IME is active, skip Telex/VNI processing to avoid conflicts with Japanese input.
+	if (isImeON) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 
