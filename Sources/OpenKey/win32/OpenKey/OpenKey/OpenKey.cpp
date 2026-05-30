@@ -80,6 +80,7 @@ void OpenKeyFree() {
 
 void OpenKeyInit() {
 	APP_GET_DATA(vLanguage, 1);
+	vLanguage = vLanguage ? 1 : 0;
 	APP_GET_DATA(vInputType, 0);
 	vFreeMark = 0;
 	APP_GET_DATA(vCodeTable, 0);
@@ -410,6 +411,7 @@ void notifyManualLanguageChoice() {
 }
 
 void switchLanguage() {
+	vLanguage = vLanguage ? 1 : 0;
 	if (vLanguage == 0)
 		vLanguage = 1;
 	else
@@ -427,6 +429,9 @@ void switchLanguage() {
 
 static bool queryImeOpenStatus() {
 	HWND hWnd = GetForegroundWindow();
+	if (!hWnd) {
+		return false;
+	}
 	DWORD threadId = GetWindowThreadProcessId(hWnd, NULL);
 	GUITHREADINFO gti;
 	gti.cbSize = sizeof(GUITHREADINFO);
@@ -438,6 +443,18 @@ static bool queryImeOpenStatus() {
 		return false;
 	}
 	return SendMessage(hIME, WM_IME_CONTROL, IMC_GETOPENSTATUS, 0) != 0;
+}
+
+static bool shouldBypassVietnameseEngine(const bool& isImeON) {
+	if (!isImeON) {
+		return false;
+	}
+	// Keep Vietnamese processing when user intentionally forces V while IME is open.
+	if (vLanguage == 1 && vUserOverrodeImeAutoSwitch) {
+		return false;
+	}
+	// Respect "Other languages" setting on Windows as well.
+	return vOtherLanguage != 0;
 }
 
 static void updateImeAutoLanguage(const bool& isImeON) {
@@ -605,8 +622,8 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 	const bool isImeON = queryImeOpenStatus();
 	updateImeAutoLanguage(isImeON);
 
-	// While IME is active, skip Telex/VNI processing to avoid conflicts with Japanese input.
-	if (isImeON) {
+	// While IME is active, skip Telex/VNI processing unless user intentionally forces Vietnamese mode.
+	if (shouldBypassVietnameseEngine(isImeON)) {
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
 	}
 
@@ -728,9 +745,10 @@ VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, H
 			return;
 		_languageTemp = getAppInputMethodStatus(exe, vLanguage | (vCodeTable << 1));
 		vTempOffEngine(false);
-		if (vUseSmartSwitchKey && (_languageTemp & 0x01) != vLanguage) {
+		if (vUseSmartSwitchKey && (_languageTemp & 0x01) != (vLanguage & 0x01)) {
 			if (_languageTemp != -1) {
-				vLanguage = _languageTemp;
+				vLanguage = (_languageTemp & 0x01);
+				vUserOverrodeImeAutoSwitch = 0;
 				AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
 			} else {
 				saveSmartSwitchKeyData();

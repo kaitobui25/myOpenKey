@@ -164,6 +164,7 @@ void AppDelegate::closeDialog(BaseDialog * dialog) {
 }
 
 void AppDelegate::onInputMethodChangedFromHotKey() {
+	vLanguage = vLanguage ? 1 : 0;
 	APP_SET_DATA(vLanguage, vLanguage);
 	if (mainDialog) {
 		mainDialog->fillData();
@@ -210,6 +211,7 @@ void AppDelegate::onDefaultConfig() {
 
 void AppDelegate::onToggleVietnamese() {
 	APP_SET_DATA(vLanguage, vLanguage ? 0 : 1);
+	vLanguage = vLanguage ? 1 : 0;
 	notifyManualLanguageChoice();
 	if (mainDialog) {
 		mainDialog->fillData();
