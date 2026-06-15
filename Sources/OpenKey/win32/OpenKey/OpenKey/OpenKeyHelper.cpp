@@ -318,7 +318,14 @@ DWORD OpenKeyHelper::getVersionNumber() {
 wstring OpenKeyHelper::getVersionString() {
 	TCHAR versionBuffer[MAX_PATH];
 	DWORD ver = getVersionNumber();
-	wsprintfW(versionBuffer, _T("%d.%d.%d"), ver & 0xFF, (ver>>8) & 0xFF, (ver >> 16) & 0xFF);
+	int major = ver & 0xFF;
+	int minor = (ver >> 8) & 0xFF;
+	int patch = (ver >> 16) & 0xFF;
+	if (patch == 0) {
+		wsprintfW(versionBuffer, _T("%d.%d"), major, minor);
+	} else {
+		wsprintfW(versionBuffer, _T("%d.%d.%d"), major, minor, patch);
+	}
 	return wstring(versionBuffer);
 
 	// get the filename of the executable containing the version resource

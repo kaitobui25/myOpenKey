@@ -19,6 +19,11 @@ redistribute your new version, it MUST be open source.
 #pragma comment(lib, "UxTheme.lib")
 
 static Uint16 _lastKeyCode;
+static const wchar_t* CUSTOM_BUILD_VERSION = L"26.1";
+static const wchar_t* CUSTOM_BUILD_REPO = L"https://github.com/kaitobui25/myOpenKey";
+static const wchar_t* CUSTOM_BUILD_SUMMARY =
+    L"Cap nhat: Sua loi go tat bi mat khoang trang, crash sau khi bung go tat, "
+    L"loi clipboard paste mode, va loi du phim break trong English mode.";
 
 MainControlDialog::MainControlDialog(const HINSTANCE& hInstance, const int& resourceId)
     : BaseDialog(hInstance, resourceId) {
@@ -240,7 +245,7 @@ INT_PTR MainControlDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
             onUpdateButton();
             break;
         case IDC_BUTTON_GO_SOURCE_CODE:
-            ShellExecute(NULL, _T("open"), _T("https://github.com/tuyenvm/OpenKey"), NULL, NULL, SW_SHOWNORMAL);
+            ShellExecute(NULL, _T("open"), CUSTOM_BUILD_REPO, NULL, NULL, SW_SHOWNORMAL);
             break;
         default:
             if (HIWORD(wParam) == CBN_SELCHANGE) {
@@ -269,7 +274,7 @@ INT_PTR MainControlDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
         case NM_RETURN: {
             PNMLINK link = (PNMLINK)lParam;
             if (link->hdr.idFrom == IDC_SYSLINK_HOME_PAGE)
-                ShellExecute(NULL, _T("open"), _T("http://open-key.org"), NULL, NULL, SW_SHOWNORMAL);
+                ShellExecute(NULL, _T("open"), CUSTOM_BUILD_REPO, NULL, NULL, SW_SHOWNORMAL);
             else if (link->hdr.idFrom == IDC_SYSLINK_FANPAGE)
                 ShellExecute(NULL, _T("open"), _T("https://www.facebook.com/OpenKeyVN"), NULL, NULL, SW_SHOWNORMAL);
             else if (link->hdr.idFrom == IDC_SYSLINK_AUTHOR_EMAIL)
@@ -373,7 +378,17 @@ void MainControlDialog::fillData() {
 
     //tab info
     wchar_t buffer[256];
-    wsprintfW(buffer, _T("Phiên bản %s cho Windows - Ngày cập nhật: %s"), OpenKeyHelper::getVersionString().c_str(), _T(__DATE__));
+    SetDlgItemText(hTabPage4, IDC_STATIC_APP_TITLE, _T("OpenKey Custom Build"));
+    SetDlgItemText(hTabPage4, IDC_STATIC_APP_TITLE2, _T("Nguon build"));
+    SetDlgItemText(hTabPage4, IDC_SYSLINK_HOME_PAGE, _T("<a>https://github.com/kaitobui25/myOpenKey</a>"));
+    SetDlgItemText(hTabPage4, IDC_STATIC_APP_SUB_TITLE5, CUSTOM_BUILD_SUMMARY);
+    SetDlgItemText(hTabPage4, IDC_STATIC_APP_SUB_TITLE6, _T("Build rieng tu fork kaitobui25"));
+    SetDlgItemText(hTabPage4, IDC_STATIC_APP_TITLE3, _T(""));
+    SetDlgItemText(hTabPage4, IDC_SYSLINK_FANPAGE, _T(""));
+    SetDlgItemText(hTabPage4, IDC_SYSLINK_AUTHOR_EMAIL, _T(""));
+    ShowWindow(GetDlgItem(hTabPage4, IDC_SYSLINK_FANPAGE), SW_HIDE);
+    ShowWindow(GetDlgItem(hTabPage4, IDC_SYSLINK_AUTHOR_EMAIL), SW_HIDE);
+    wsprintfW(buffer, _T("Phien ban build: %s - Ngay cap nhat: %s"), CUSTOM_BUILD_VERSION, _T(__DATE__));
     SendDlgItemMessage(hTabPage4, IDC_STATIC_APP_VERSION_INFO, WM_SETTEXT, 0, LPARAM(buffer));
 }
 

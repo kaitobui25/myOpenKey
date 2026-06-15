@@ -2,7 +2,12 @@
 
 ##### OpenKey for Linux: (in development)
 
-##### Custom Build Win32 2.0.4: (16/06/2026) - kaitobui25 fork
+##### Custom Build Win32 26.1: (16/06/2026) - kaitobui25 fork
+- **Custom build identity:** Replaced the Control Panel's Thong tin tab with custom build information.
+  - Build version now starts at **26.1** for this fork; future custom fixes should increment by **0.1**.
+  - Windows file/product version metadata is now `26.1.0.0`, while the UI displays the shorter `26.1`.
+  - The source link in Thong tin now points to `https://github.com/kaitobui25/myOpenKey`.
+  - The tab includes a short summary of the current update.
 - **Fix macro expansion stability (Windows):** Prevented intermittent crashes and spacing corruption after using go tat.
   - Macro expansion no longer applies the autocomplete empty-character workaround, which could delete the space before the expanded phrase in some apps/IME states.
   - Guarded VNI/Unicode Compound backspace sync state so macro replacement cannot crash when the sync cache is empty or reset.
