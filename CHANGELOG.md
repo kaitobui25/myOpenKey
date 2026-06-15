@@ -2,6 +2,13 @@
 
 ##### OpenKey for Linux: (in development)
 
+##### Custom Build Win32 2.0.4: (16/06/2026) - kaitobui25 fork
+- **Fix macro expansion stability (Windows):** Prevented intermittent crashes and spacing corruption after using go tat.
+  - Macro expansion no longer applies the autocomplete empty-character workaround, which could delete the space before the expanded phrase in some apps/IME states.
+  - Guarded VNI/Unicode Compound backspace sync state so macro replacement cannot crash when the sync cache is empty or reset.
+  - Reworked clipboard-string assembly used by macro paste mode to avoid buffer overwrite/read past the end, always write a null-terminated string, and avoid pasting stale clipboard content if clipboard setup fails.
+  - English-mode macro expansion now consumes the trigger key after manually replaying it, preventing duplicate trailing spaces or break keys.
+
 ##### Custom Build Win32 2.0.3: (20/05/2026) — kaitobui25 fork
 - **Fix IME Japanese (Windows 10/11):** Resolved intermittent “stuck on English (E)” in Outlook, Microsoft Teams, Opera, and similar apps when Japanese IME reports open.
   - Language hotkeys (e.g. **Ctrl+Shift**) are processed **before** the IME bypass, so E/V can always be toggled even while IME is active.

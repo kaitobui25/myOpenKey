@@ -193,14 +193,37 @@ wstring OpenKeyHelper::getClipboardText(const int& type) {
 	return text;
 }
 
-void OpenKeyHelper::setClipboardText(LPCTSTR data, const int & len, const int& type) {
+bool OpenKeyHelper::setClipboardText(LPCTSTR data, const int & len, const int& type) {
+	if (data == nullptr || len <= 0) {
+		return false;
+	}
 	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len * sizeof(WCHAR));
-	memcpy(GlobalLock(hMem), data, len * sizeof(WCHAR));
+	if (!hMem) {
+		return false;
+	}
+	void* pMem = GlobalLock(hMem);
+	if (!pMem) {
+		GlobalFree(hMem);
+		return false;
+	}
+	memcpy(pMem, data, len * sizeof(WCHAR));
 	GlobalUnlock(hMem);
-	OpenClipboard(0);
-	EmptyClipboard();
-	SetClipboardData(type, hMem);
+	if (!OpenClipboard(0)) {
+		GlobalFree(hMem);
+		return false;
+	}
+	if (!EmptyClipboard()) {
+		GlobalFree(hMem);
+		CloseClipboard();
+		return false;
+	}
+	if (!SetClipboardData(type, hMem)) {
+		GlobalFree(hMem);
+		CloseClipboard();
+		return false;
+	}
 	CloseClipboard();
+	return true;
 }
 
 bool OpenKeyHelper::quickConvert() {

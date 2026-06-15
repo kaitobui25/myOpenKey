@@ -51,11 +51,10 @@ static Uint16 _keycode;
 static Uint16 _newChar, _newCharHi;
 
 static vector<Uint16> _newCharString;
-static Uint16 _newCharSize;
 static bool _willSendControlKey = false;
 
 static Uint16 _uniChar[2];
-static int _i, _j, _k;
+static int _i, _k;
 static Uint32 _tempChar;
 
 static string macroText, macroContent;
@@ -276,6 +275,9 @@ static void SendBackspace() {
 		SendMessage(HWND_BROADCAST, WM_CHAR, VK_BACK, 0L);
 	}
 	if (IS_DOUBLE_CODE(vCodeTable)) { //VNI or Unicode Compound
+		if (_syncKey.empty()) {
+			return;
+		}
 		if (_syncKey.back() > 1) {
 			/*if (!(vCodeTable == 3 && containUnicodeCompoundApp(FRONT_APP))) {
 				SendInput(2, backspaceEvent, sizeof(INPUT));
@@ -302,42 +304,37 @@ static void SendEmptyCharacter() {
 }
 
 static void SendNewCharString(const bool& dataFromMacro = false) {
-	_j = 0;
-	_newCharSize = dataFromMacro ? (Uint16)pData->macroData.size() : pData->newCharCount;
-	if (_newCharString.size() < _newCharSize) {
-		_newCharString.resize(_newCharSize);
-	}
+	_newCharString.clear();
 	_willSendControlKey = false;
 	
-	if (_newCharSize > 0) {
+	if ((dataFromMacro && pData->macroData.size() > 0) || (!dataFromMacro && pData->newCharCount > 0)) {
 		for (_k = dataFromMacro ? 0 : pData->newCharCount - 1;
 			dataFromMacro ? _k < pData->macroData.size() : _k >= 0;
 			dataFromMacro ? _k++ : _k--) {
 
 			_tempChar = DYNA_DATA(dataFromMacro, _k);
 			if (_tempChar & PURE_CHARACTER_MASK) {
-				_newCharString[_j++] = _tempChar;
+				_newCharString.push_back((Uint16)_tempChar);
 				if (IS_DOUBLE_CODE(vCodeTable)) {
 					InsertKeyLength(1);
 				}
 			} else if (!(_tempChar & CHAR_CODE_MASK)) {
 				if (IS_DOUBLE_CODE(vCodeTable)) //VNI
 					InsertKeyLength(1);
-				_newCharString[_j++] = keyCodeToCharacter(_tempChar);
+				_newCharString.push_back(keyCodeToCharacter(_tempChar));
 			} else {
 				_newChar = _tempChar;
 				if (vCodeTable == 0) {  //unicode 2 bytes code
-					_newCharString[_j++] = _newChar;
+					_newCharString.push_back(_newChar);
 				} else if (vCodeTable == 1 || vCodeTable == 2 || vCodeTable == 4) { //others such as VNI Windows, TCVN3: 1 byte code
 					_newCharHi = HIBYTE(_newChar);
 					_newChar = LOBYTE(_newChar);
-					_newCharString[_j++] = _newChar;
+					_newCharString.push_back(_newChar);
 
 					if (_newCharHi > 32) {
 						if (vCodeTable == 2) //VNI
 							InsertKeyLength(2);
-						_newCharString[_j++] = _newCharHi;
-						_newCharSize++;
+						_newCharString.push_back(_newCharHi);
 					}
 					else {
 						if (vCodeTable == 2) //VNI
@@ -348,10 +345,9 @@ static void SendNewCharString(const bool& dataFromMacro = false) {
 					_newChar &= 0x1FFF;
 
 					InsertKeyLength(_newCharHi > 0 ? 2 : 1);
-					_newCharString[_j++] = _newChar;
+					_newCharString.push_back(_newChar);
 					if (_newCharHi > 0) {
-						_newCharSize++;
-						_newCharString[_j++] = _unicodeCompoundMark[_newCharHi - 1];
+						_newCharString.push_back(_unicodeCompoundMark[_newCharHi - 1]);
 					}
 
 				}
@@ -361,8 +357,7 @@ static void SendNewCharString(const bool& dataFromMacro = false) {
 
 	if (pData->code == vRestore || pData->code == vRestoreAndStartNewSession) { //if is restore
 		if (keyCodeToCharacter(_keycode) != 0) {
-			_newCharSize++;
-			_newCharString[_j++] = keyCodeToCharacter(_keycode | ((_flag & MASK_SHIFT) || (_flag & MASK_CAPITAL) ? CAPS_MASK : 0));
+			_newCharString.push_back(keyCodeToCharacter(_keycode | ((_flag & MASK_SHIFT) || (_flag & MASK_CAPITAL) ? CAPS_MASK : 0)));
 		} else {
 			_willSendControlKey = true;
 		}
@@ -371,7 +366,10 @@ static void SendNewCharString(const bool& dataFromMacro = false) {
 		startNewSession();
 	}
 
-	OpenKeyHelper::setClipboardText((LPCTSTR)_newCharString.data(), _newCharSize + 1, CF_UNICODETEXT);
+	_newCharString.push_back(0);
+	if (!OpenKeyHelper::setClipboardText((LPCTSTR)_newCharString.data(), (int)_newCharString.size(), CF_UNICODETEXT)) {
+		return;
+	}
 
 	//Send shift + insert
 	SendCombineKey(KEY_LEFT_SHIFT, VK_INSERT, 0, KEYEVENTF_EXTENDEDKEY);
@@ -534,12 +532,6 @@ static void SendPureCharacter(const Uint16& ch) {
 }
 
 static void handleMacro() {
-	//fix autocomplete
-	if (vFixRecommendBrowser) {
-		SendEmptyCharacter();
-		pData->backspaceCount++;
-	}
-
 	//send backspace
 	if (pData->backspaceCount > 0) {
 		for (int i = 0; i < pData->backspaceCount; i++) {
@@ -637,7 +629,7 @@ LRESULT CALLBACK keyboardHookProcess(int nCode, WPARAM wParam, LPARAM lParam) {
 
 			if (pData->code == vReplaceMaro) { //handle macro in english mode
 				handleMacro();
-				return NULL;
+				return -1;
 			}
 		}
 		return CallNextHookEx(hKeyboardHook, nCode, wParam, lParam);
