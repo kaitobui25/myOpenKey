@@ -14,6 +14,7 @@ redistribute your new version, it MUST be open source.
 #include "MacroDialog.h"
 #include "stdafx.h"
 #include "AppDelegate.h"
+#include "MacroSync.h"
 #include <commdlg.h>
 
 #define MAX_MACRO_BUFFER 4096
@@ -127,6 +128,7 @@ void MacroDialog::saveAndReload() {
 	vector<Byte> macroData;
 	getMacroSaveData(macroData);
 	OpenKeyHelper::setRegBinary(_T("macroData"), macroData.data(), (int)macroData.size());
+	MacroSync::saveCurrent();
 
 	//reload data
 	fillData();

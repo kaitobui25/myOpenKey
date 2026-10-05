@@ -12,6 +12,7 @@ You can fork, modify, improve this program. If you
 redistribute your new version, it MUST be open source.
 -----------------------------------------------------------*/
 #include "AppDelegate.h"
+#include "MacroSync.h"
 
 static AppDelegate* _instance;
 
@@ -109,6 +110,8 @@ int AppDelegate::run(HINSTANCE hInstance) {
 
 	//init OpenKey Engine
 	OpenKeyManager::initEngine();
+	MacroSync::initialize();
+	UINT_PTR macroSyncTimer = SetTimer(NULL, 0, 2000, NULL);
 
 	//create system tray
 	SystemTrayHelper::createSystemTrayIcon(hInstance);
@@ -126,6 +129,12 @@ int AppDelegate::run(HINSTANCE hInstance) {
 	MSG msg;
 	// Main message loop:
 	while (GetMessage(&msg, nullptr, 0, 0))	{
+		if (macroSyncTimer != 0 && msg.message == WM_TIMER && msg.hwnd == NULL && msg.wParam == macroSyncTimer) {
+			if (MacroSync::checkForRemoteUpdate() && macroDialog != NULL) {
+				macroDialog->fillData();
+			}
+			continue;
+		}
 		if (msg.message == WM_KEYDOWN) {
 			OpenKeyManager::_lastKeyCode = (UINT16)msg.wParam;
 		}
@@ -134,6 +143,10 @@ int AppDelegate::run(HINSTANCE hInstance) {
 			DispatchMessage(&msg);
 		}
 	}
+	if (macroSyncTimer != 0) {
+		KillTimer(NULL, macroSyncTimer);
+	}
+	MacroSync::shutdown();
 	return 0;
 }
 
