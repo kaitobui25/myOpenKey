@@ -81,6 +81,12 @@
     <ClInclude Include="ConvertToolDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CrashHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DiagnosticLog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="MacroDialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -135,6 +141,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ConvertToolDialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CrashHandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DiagnosticLog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MacroDialog.cpp">

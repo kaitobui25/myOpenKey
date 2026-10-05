@@ -167,6 +167,8 @@
     <ClInclude Include="AppDelegate.h" />
     <ClInclude Include="BaseDialog.h" />
     <ClInclude Include="ConvertToolDialog.h" />
+    <ClInclude Include="CrashHandler.h" />
+    <ClInclude Include="DiagnosticLog.h" />
     <ClInclude Include="MacroDialog.h" />
     <ClInclude Include="MainControlDialog.h" />
     <ClInclude Include="MacroSync.h" />
@@ -187,6 +189,8 @@
     <ClCompile Include="AppDelegate.cpp" />
     <ClCompile Include="BaseDialog.cpp" />
     <ClCompile Include="ConvertToolDialog.cpp" />
+    <ClCompile Include="CrashHandler.cpp" />
+    <ClCompile Include="DiagnosticLog.cpp" />
     <ClCompile Include="MacroDialog.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainControlDialog.cpp" />

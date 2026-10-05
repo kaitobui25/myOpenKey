@@ -2,6 +2,12 @@
 
 ##### OpenKey for Linux: (in development)
 
+##### Custom Build Win32 26.2: (05/10/2026) - kaitobui25 fork
+- **Diagnostic logging:** Added a privacy-safe rolling diagnostic log retaining the latest 5 minutes, with asynchronous disk writing to avoid blocking the keyboard hook.
+- **Export log:** Added an `Xuất log...` button next to `Kiểm tra bản mới...` so the recent diagnostic window can be saved as a text file.
+- **Crash diagnostics:** Added Windows minidump generation for unhandled crashes. Force-stop cannot trigger a crash handler, but the rolling log already persisted before termination remains available.
+- The rolling text log deliberately does not record raw keystrokes, typed text, or macro contents. Crash `.dmp` files are stored separately and may contain process-memory fragments.
+
 ##### Custom Build Win32 26.1: (16/06/2026) - kaitobui25 fork
 - **Custom build identity:** Replaced the Control Panel's Thong tin tab with custom build information.
   - Build version now starts at **26.1** for this fork; future custom fixes should increment by **0.1**.

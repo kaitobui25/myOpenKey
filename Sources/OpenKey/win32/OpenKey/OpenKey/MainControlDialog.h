@@ -36,6 +36,7 @@ private:
 	void setSwitchKeyText(const HWND& hWnd, const UINT16 & keyCode);
 	void onTabIndexChanged();
 	void onUpdateButton();
+	void onExportDiagnosticLog();
 	void requestRestartAsAdmin();
 protected:
 	INT_PTR eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);

@@ -2,7 +2,7 @@
 
 ## Mandatory custom-build version rule
 
-Current custom Windows build baseline: **26.1**.
+Current custom Windows build baseline: **26.2**.
 
 Whenever a new user-facing Windows build/release is planned, the agent must update the custom build version **before starting or triggering the build**.
 

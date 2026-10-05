@@ -13,6 +13,7 @@ redistribute your new version, it MUST be open source.
 -----------------------------------------------------------*/
 #include "stdafx.h"
 #include "AppDelegate.h"
+#include "DiagnosticLog.h"
 
 #pragma comment(lib, "imm32")
 #define IMC_GETOPENSTATUS 0x0005
@@ -72,6 +73,7 @@ LRESULT CALLBACK mouseHookProcess(int nCode, WPARAM wParam, LPARAM lParam);
 VOID CALLBACK winEventProcCallback(HWINEVENTHOOK hWinEventHook, DWORD dwEvent, HWND hwnd, LONG idObject, LONG idChild, DWORD dwEventThread, DWORD dwmsEventTime);
 
 void OpenKeyFree() {
+	DiagnosticLog::log(L"ENGINE", L"unhook requested");
 	UnhookWindowsHookEx(hMouseHook);
 	UnhookWindowsHookEx(hKeyboardHook);
 	UnhookWinEvent(hSystemEvent);
@@ -169,6 +171,8 @@ void OpenKeyInit() {
 	hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProcess, hInstance, 0);
 	hMouseHook = SetWindowsHookEx(WH_MOUSE_LL, mouseHookProcess, hInstance, 0);
 	hSystemEvent = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, NULL, winEventProcCallback, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
+	DiagnosticLog::logf(L"ENGINE", L"initialized keyboardHook=%d mouseHook=%d foregroundHook=%d",
+		hKeyboardHook != NULL, hMouseHook != NULL, hSystemEvent != NULL);
 }
 
 void saveSmartSwitchKeyData() {
@@ -456,6 +460,10 @@ static bool shouldBypassVietnameseEngine(const bool& isImeON) {
 }
 
 static void updateImeAutoLanguage(const bool& isImeON) {
+	if (isImeON != _prevImeON) {
+		DiagnosticLog::logf(L"IME", L"openStatus changed open=%d language=%s userOverride=%d autoSwitched=%d",
+			isImeON ? 1 : 0, vLanguage ? L"VI" : L"EN", vUserOverrodeImeAutoSwitch, vWasAutoSwitchedByIme);
+	}
 	if (isImeON && !_prevImeON && vLanguage == 1 && !vUserOverrodeImeAutoSwitch) {
 		vLanguage = 0;
 		AppDelegate::getInstance()->onInputMethodChangedFromHotKey();
@@ -532,6 +540,8 @@ static void SendPureCharacter(const Uint16& ch) {
 }
 
 static void handleMacro() {
+	DiagnosticLog::logf(L"MACRO", L"expand begin backspaces=%d outputUnits=%u sendMode=%s",
+		pData->backspaceCount, (unsigned int)pData->macroData.size(), vSendKeyStepByStep ? L"keys" : L"clipboard");
 	//send backspace
 	if (pData->backspaceCount > 0) {
 		for (int i = 0; i < pData->backspaceCount; i++) {
@@ -551,6 +561,7 @@ static void handleMacro() {
 		}
 	}
 	SendKeyCode(_keycode | (_flag & MASK_SHIFT ? CAPS_MASK : 0));
+	DiagnosticLog::log(L"MACRO", L"expand end");
 }
 
 static bool SetModifierMask(const Uint16& vkCode) {

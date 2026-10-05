@@ -13,17 +13,18 @@ redistribute your new version, it MUST be open source.
 -----------------------------------------------------------*/
 #include "MainControlDialog.h"
 #include "AppDelegate.h"
+#include "DiagnosticLog.h"
 #include <Shlobj.h>
 #include <Uxtheme.h>
+#include <commdlg.h>
 
 #pragma comment(lib, "UxTheme.lib")
 
 static Uint16 _lastKeyCode;
-static const wchar_t* CUSTOM_BUILD_VERSION = L"26.1";
+static const wchar_t* CUSTOM_BUILD_VERSION = L"26.2";
 static const wchar_t* CUSTOM_BUILD_REPO = L"https://github.com/kaitobui25/myOpenKey";
 static const wchar_t* CUSTOM_BUILD_SUMMARY =
-    L"Cap nhat: Sua loi go tat bi mat khoang trang, crash sau khi bung go tat, "
-    L"loi clipboard paste mode, va loi du phim break trong English mode.";
+    L"Cap nhat: Them rolling diagnostic log 5 phut, nut xuat log va crash dump de dieu tra crash/force stop.";
 
 MainControlDialog::MainControlDialog(const HINSTANCE& hInstance, const int& resourceId)
     : BaseDialog(hInstance, resourceId) {
@@ -243,6 +244,9 @@ INT_PTR MainControlDialog::eventProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM
             break;
         case IDC_BUTTON_CHECK_UPDATE:
             onUpdateButton();
+            break;
+        case IDC_BUTTON_EXPORT_DIAGNOSTIC_LOG:
+            onExportDiagnosticLog();
             break;
         case IDC_BUTTON_GO_SOURCE_CODE:
             ShellExecute(NULL, _T("open"), CUSTOM_BUILD_REPO, NULL, NULL, SW_SHOWNORMAL);
@@ -649,6 +653,39 @@ void MainControlDialog::onUpdateButton() {
         MessageBox(hDlg, _T("Bạn đang dùng phiên bản mới nhất!"), _T("OpenKey Update"), MB_OK);
     }
     EnableWindow(hUpdateButton, true);
+}
+
+void MainControlDialog::onExportDiagnosticLog() {
+	SYSTEMTIME now;
+	GetLocalTime(&now);
+	wchar_t fileName[MAX_PATH] = { 0 };
+	_snwprintf_s(fileName, _countof(fileName), _TRUNCATE, L"OpenKey_Log_%04d%02d%02d_%02d%02d%02d.txt",
+		now.wYear, now.wMonth, now.wDay, now.wHour, now.wMinute, now.wSecond);
+
+	OPENFILENAME ofn;
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = hDlg;
+	ofn.lpstrFile = fileName;
+	ofn.nMaxFile = _countof(fileName);
+	ofn.lpstrFilter = _T("Text file (*.txt)\0*.txt\0All files (*.*)\0*.*\0\0");
+	ofn.lpstrDefExt = _T("txt");
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+	if (!GetSaveFileName(&ofn)) {
+		if (CommDlgExtendedError() != 0) {
+			MessageBox(hDlg, _T("Không thể mở hộp thoại lưu diagnostic log."), _T("OpenKey Diagnostic Log"), MB_OK | MB_ICONERROR);
+		}
+		return;
+	}
+
+	DiagnosticLog::log(L"UI", L"diagnostic export requested");
+	if (DiagnosticLog::exportRecentTo(fileName)) {
+		std::wstring message = L"Đã xuất diagnostic log (5 phút hiện tại và phiên crash/force-stop trước nếu có):\n" + std::wstring(fileName) +
+			L"\n\nNếu OpenKey bị crash, file .dmp được giữ trong thư mục Diagnostics ghi ở đầu file log. File .dmp có thể chứa mảnh dữ liệu trong bộ nhớ, hãy xem là dữ liệu nhạy cảm.";
+		MessageBox(hDlg, message.c_str(), _T("OpenKey Diagnostic Log"), MB_OK | MB_ICONINFORMATION);
+	} else {
+		MessageBox(hDlg, _T("Không thể xuất diagnostic log."), _T("OpenKey Diagnostic Log"), MB_OK | MB_ICONERROR);
+	}
 }
 
 void MainControlDialog::requestRestartAsAdmin() {

@@ -13,6 +13,7 @@ redistribute your new version, it MUST be open source.
 -----------------------------------------------------------*/
 #include "AppDelegate.h"
 #include "MacroSync.h"
+#include "DiagnosticLog.h"
 
 static AppDelegate* _instance;
 
@@ -107,11 +108,14 @@ int AppDelegate::run(HINSTANCE hInstance) {
 		PostQuitMessage(0);
 		return 0;
 	}
+	DiagnosticLog::initialize();
 
 	//init OpenKey Engine
 	OpenKeyManager::initEngine();
 	MacroSync::initialize();
 	UINT_PTR macroSyncTimer = SetTimer(NULL, 0, 2000, NULL);
+	UINT_PTR diagnosticTimer = SetTimer(NULL, 0, 5000, NULL);
+	DiagnosticLog::logf(L"APP", L"run started pid=%lu", GetCurrentProcessId());
 
 	//create system tray
 	SystemTrayHelper::createSystemTrayIcon(hInstance);
@@ -135,6 +139,13 @@ int AppDelegate::run(HINSTANCE hInstance) {
 			}
 			continue;
 		}
+		if (diagnosticTimer != 0 && msg.message == WM_TIMER && msg.hwnd == NULL && msg.wParam == diagnosticTimer) {
+			DiagnosticLog::logf(L"HEARTBEAT",
+				L"lang=%d input=%d code=%d macro=%d sendMode=%s smartSwitch=%d tempOff=%d",
+				vLanguage, vInputType, vCodeTable, vUseMacro, vSendKeyStepByStep ? L"keys" : L"clipboard",
+				vUseSmartSwitchKey, vTempOffOpenKey);
+			continue;
+		}
 		if (msg.message == WM_KEYDOWN) {
 			OpenKeyManager::_lastKeyCode = (UINT16)msg.wParam;
 		}
@@ -146,7 +157,12 @@ int AppDelegate::run(HINSTANCE hInstance) {
 	if (macroSyncTimer != 0) {
 		KillTimer(NULL, macroSyncTimer);
 	}
+	if (diagnosticTimer != 0) {
+		KillTimer(NULL, diagnosticTimer);
+	}
 	MacroSync::shutdown();
+	DiagnosticLog::log(L"APP", L"message loop ended");
+	DiagnosticLog::shutdown();
 	return 0;
 }
 
@@ -178,6 +194,7 @@ void AppDelegate::closeDialog(BaseDialog * dialog) {
 
 void AppDelegate::onInputMethodChangedFromHotKey() {
 	vLanguage = vLanguage ? 1 : 0;
+	DiagnosticLog::logf(L"LANG", L"language changed by engine/hotkey new=%s", vLanguage ? L"VI" : L"EN");
 	APP_SET_DATA(vLanguage, vLanguage);
 	if (mainDialog) {
 		mainDialog->fillData();
@@ -225,6 +242,7 @@ void AppDelegate::onDefaultConfig() {
 void AppDelegate::onToggleVietnamese() {
 	APP_SET_DATA(vLanguage, vLanguage ? 0 : 1);
 	vLanguage = vLanguage ? 1 : 0;
+	DiagnosticLog::logf(L"LANG", L"language toggled from UI/tray new=%s", vLanguage ? L"VI" : L"EN");
 	notifyManualLanguageChoice();
 	if (mainDialog) {
 		mainDialog->fillData();
@@ -320,6 +338,7 @@ void AppDelegate::onOpenKeyAbout() {
 }
 
 void AppDelegate::onOpenKeyExit() {
+	DiagnosticLog::log(L"APP", L"normal exit requested");
 	OpenKeyManager::freeEngine();
 	SystemTrayHelper::removeSystemTray();
 	PostQuitMessage(0);
