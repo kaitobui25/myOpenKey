@@ -21,10 +21,10 @@ redistribute your new version, it MUST be open source.
 #pragma comment(lib, "UxTheme.lib")
 
 static Uint16 _lastKeyCode;
-static const wchar_t* CUSTOM_BUILD_VERSION = L"26.2";
+static const wchar_t* CUSTOM_BUILD_VERSION = L"26.3";
 static const wchar_t* CUSTOM_BUILD_REPO = L"https://github.com/kaitobui25/myOpenKey";
 static const wchar_t* CUSTOM_BUILD_SUMMARY =
-    L"Cap nhat: Them rolling diagnostic log 5 phut, nut xuat log va crash dump de dieu tra crash/force stop.";
+    L"Cap nhat: Tu dong giu log 5 phut trong Downloads khi OpenKey crash hoac bi buoc dong.";
 
 MainControlDialog::MainControlDialog(const HINSTANCE& hInstance, const int& resourceId)
     : BaseDialog(hInstance, resourceId) {
