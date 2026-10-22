@@ -21,10 +21,10 @@ redistribute your new version, it MUST be open source.
 #pragma comment(lib, "UxTheme.lib")
 
 static Uint16 _lastKeyCode;
-static const wchar_t* CUSTOM_BUILD_VERSION = L"26.2";
+static const wchar_t* CUSTOM_BUILD_VERSION = L"26.4";
 static const wchar_t* CUSTOM_BUILD_REPO = L"https://github.com/kaitobui25/myOpenKey";
 static const wchar_t* CUSTOM_BUILD_SUMMARY =
-    L"Cap nhat: Them rolling diagnostic log 5 phut, nut xuat log va crash dump de dieu tra crash/force stop.";
+    L"Cap nhat: Them tuy chon bat/tat tu dong luu log khi loi trong tab He thong.";
 
 MainControlDialog::MainControlDialog(const HINSTANCE& hInstance, const int& resourceId)
     : BaseDialog(hInstance, resourceId) {
@@ -204,6 +204,8 @@ void MainControlDialog::initDialog() {
     checkFixChromium = GetDlgItem(hTabPage3, IDC_CHECK_FIX_CHROMIUM);
     createToolTip(checkFixChromium, IDS_STRING_FIX_CHROMIUM);
 
+    checkAutoRecoveryLog = GetDlgItem(hTabPage3, IDC_CHECK_AUTO_RECOVERY_LOG);
+
     /*------------end tab 3----------------*/
 
     SendDlgItemMessage(hDlg, IDBUTTON_OK, BM_SETIMAGE, IMAGE_ICON, (LPARAM)LoadIcon(hIns, MAKEINTRESOURCEW(IDI_ICON_OK_BUTTON)));
@@ -374,6 +376,7 @@ void MainControlDialog::fillData() {
     SendMessage(checkCheckNewVersion, BM_SETCHECK, vCheckNewVersion ? 1 : 0, 0);
     SendMessage(checkUseClipboard, BM_SETCHECK, vSendKeyStepByStep ? 0 : 1, 0);
     SendMessage(checkFixChromium, BM_SETCHECK, vFixChromiumBrowser ? 1 : 0, 0);
+    SendMessage(checkAutoRecoveryLog, BM_SETCHECK, DiagnosticLog::isAutoRecoveryEnabled() ? 1 : 0, 0);
 
     EnableWindow(checkRestoreIfWrongSpelling, vCheckSpelling);
     EnableWindow(checkAllowZWJF, vCheckSpelling);
@@ -583,6 +586,13 @@ void MainControlDialog::onCheckboxClicked(const HWND& hWnd) {
     else if (hWnd == checkFixChromium) {
         val = (int)SendMessage(hWnd, BM_GETCHECK, 0, 0);
         APP_SET_DATA(vFixChromiumBrowser, val ? 1 : 0);
+    }
+    else if (hWnd == checkAutoRecoveryLog) {
+        val = (int)SendMessage(hWnd, BM_GETCHECK, 0, 0);
+        if (!DiagnosticLog::setAutoRecoveryEnabled(val != 0)) {
+            MessageBox(hDlg, _T("Không thể xóa log hiện tại khỏi Downloads. Hãy đóng ứng dụng đang mở file log."),
+                _T("OpenKey Diagnostic Log"), MB_OK | MB_ICONWARNING);
+        }
     }
     SystemTrayHelper::updateData();
 }

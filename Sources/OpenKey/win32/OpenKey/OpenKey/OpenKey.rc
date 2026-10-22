@@ -253,6 +253,8 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,151,50,119,10
     CONTROL         "Hỗ trợ ứng dụng Metro",IDC_CHECK_SUPPORT_METRO_APP,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,12,119,10
+    CONTROL         "Tự lưu log khi OpenKey bị lỗi (Downloads)",IDC_CHECK_AUTO_RECOVERY_LOG,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,106,275,10
 END
 
 IDD_DIALOG_OLD DIALOGEX 0, 0, 316, 268
@@ -406,8 +408,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 26,2,0,0
- PRODUCTVERSION 26,2,0,0
+ FILEVERSION 26,4,0,0
+ PRODUCTVERSION 26,4,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -424,12 +426,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "kaitobui25"
             VALUE "FileDescription", "OpenKey - Bộ gõ Tiếng Việt nguồn mở"
-            VALUE "FileVersion", "26.2.0.0"
+            VALUE "FileVersion", "26.4.0.0"
             VALUE "InternalName", "OpenKey.exe"
             VALUE "LegalCopyright", "Copyright (C) 2019 - Mai Vũ Tuyên"
             VALUE "OriginalFilename", "OpenKey.exe"
             VALUE "ProductName", "OpenKey Custom Build"
-            VALUE "ProductVersion", "26.2.0.0"
+            VALUE "ProductVersion", "26.4.0.0"
         END
     END
     BLOCK "VarFileInfo"

@@ -23,6 +23,7 @@ redistribute your new version, it MUST be open source.
 namespace {
 	const DWORD WRITER_WAKE_INTERVAL_MS = 500;
 	const DWORD FLUSH_INTERVAL_MS = 1000;
+	const DWORD RECOVERY_SNAPSHOT_INTERVAL_MS = 5000;
 	const ULONGLONG SEGMENT_SECONDS = 10;
 	const ULONGLONG RETENTION_SECONDS = 5 * 60;
 	// Keep one extra partial segment so the retained window never falls short of five minutes.
@@ -31,6 +32,9 @@ namespace {
 	const DWORD MAX_EXPORTED_SEGMENT_BYTES = 2 * 1024 * 1024;
 	const ULONGLONG MAX_ABNORMAL_ARCHIVE_BYTES = 64ULL * 1024 * 1024;
 
+	const wchar_t* AUTO_RECOVERY_SETTING = L"autoRecoveryLogEnabled";
+	SRWLOCK recoveryLock = SRWLOCK_INIT;
+	volatile LONG autoRecoveryEnabled = 1;
 	CRITICAL_SECTION queueLock;
 	HANDLE wakeEvent = NULL;
 	HANDLE flushDoneEvent = NULL;
@@ -41,16 +45,21 @@ namespace {
 	bool flushRequested = false;
 	ULONGLONG currentBucket = 0;
 	ULONGLONG lastFlushTick = 0;
+	ULONGLONG lastRecoverySnapshotTick = 0;
 	ULONGLONG lastCleanupBucket = 0;
 	bool currentFileDirty = false;
 	LONG droppedLines = 0;
 	std::vector<std::wstring> pendingLines;
 	wchar_t logDirectory[MAX_PATH] = { 0 };
+	wchar_t recoverySnapshotPath[MAX_PATH] = { 0 };
 
 	struct SegmentInfo {
 		ULONGLONG bucket;
 		std::wstring path;
 	};
+	std::vector<SegmentInfo> findRecentSegments();
+	bool copySegmentToFile(const SegmentInfo& segment, HANDLE destination);
+	bool writeAll(HANDLE file, const BYTE* data, DWORD size);
 
 	ULONGLONG getCurrentBucket() {
 		FILETIME fileTime;
@@ -89,6 +98,57 @@ namespace {
 			return false;
 		}
 		return true;
+	}
+
+	// The live file is removed on a normal exit. A crash or a Windows force-stop
+	// leaves the last completed snapshot in the user's Downloads folder.
+	void createRecoverySnapshot() {
+		recoverySnapshotPath[0] = 0;
+		PWSTR downloads = NULL;
+		if (FAILED(SHGetKnownFolderPath(FOLDERID_Downloads, 0, NULL, &downloads))) {
+			return;
+		}
+		SYSTEMTIME now;
+		GetLocalTime(&now);
+		const std::wstring version = OpenKeyHelper::getVersionString();
+		const int length = _snwprintf_s(recoverySnapshotPath, _countof(recoverySnapshotPath), _TRUNCATE,
+			L"%s\\OpenKey-v%s-recovery_%04d%02d%02d_%02d%02d%02d_pid%lu.log",
+			downloads, version.c_str(), now.wYear, now.wMonth, now.wDay,
+			now.wHour, now.wMinute, now.wSecond, GetCurrentProcessId());
+		CoTaskMemFree(downloads);
+		if (length < 0) {
+			recoverySnapshotPath[0] = 0;
+			return;
+		}
+		HANDLE file = CreateFile(recoverySnapshotPath, GENERIC_WRITE, FILE_SHARE_READ,
+			NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (file == INVALID_HANDLE_VALUE) {
+			recoverySnapshotPath[0] = 0;
+			return;
+		}
+		const BYTE bom[] = { 0xEF, 0xBB, 0xBF };
+		const char header[] = "OpenKey recovery log (automatically deleted on normal exit)\r\n"
+			"Only runtime diagnostics are recorded; no keystrokes or typed text.\r\n";
+		writeAll(file, bom, sizeof(bom));
+		writeAll(file, reinterpret_cast<const BYTE*>(header), sizeof(header) - 1);
+		FlushFileBuffers(file);
+		CloseHandle(file);
+	}
+
+	bool discardRecoverySnapshot() {
+		if (!recoverySnapshotPath[0]) {
+			return true;
+		}
+		wchar_t temporaryPath[MAX_PATH] = { 0 };
+		if (_snwprintf_s(temporaryPath, _countof(temporaryPath), _TRUNCATE,
+			L"%s.tmp", recoverySnapshotPath) >= 0) {
+			DeleteFile(temporaryPath);
+		}
+		if (DeleteFile(recoverySnapshotPath) || GetLastError() == ERROR_FILE_NOT_FOUND) {
+			recoverySnapshotPath[0] = 0;
+			return true;
+		}
+		return false;
 	}
 
 	bool buildSegmentPath(const ULONGLONG bucket, wchar_t* path, const size_t pathCount) {
@@ -227,6 +287,45 @@ namespace {
 		return writeAll(file, reinterpret_cast<const BYTE*>(utf8.data()), (DWORD)utf8.size());
 	}
 
+	void refreshRecoverySnapshot() {
+		if (!recoverySnapshotPath[0]) {
+			return;
+		}
+		wchar_t temporaryPath[MAX_PATH] = { 0 };
+		if (_snwprintf_s(temporaryPath, _countof(temporaryPath), _TRUNCATE,
+			L"%s.tmp", recoverySnapshotPath) < 0) {
+			return;
+		}
+		HANDLE file = CreateFile(temporaryPath, GENERIC_WRITE, FILE_SHARE_READ,
+			NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (file == INVALID_HANDLE_VALUE) {
+			return;
+		}
+		const BYTE bom[] = { 0xEF, 0xBB, 0xBF };
+		bool ok = writeAll(file, bom, sizeof(bom));
+		ok = writeWideAsUtf8(file,
+			L"OpenKey recovery log - last 5 minutes of runtime diagnostics.\r\n"
+			L"This file remains after an unexpected exit or a Windows force-stop.\r\n"
+			L"Raw keystrokes, typed text and macro contents are not logged.\r\n\r\n") && ok;
+		const std::vector<SegmentInfo> segments = findRecentSegments();
+		for (size_t i = 0; i < segments.size(); ++i) {
+			if (!copySegmentToFile(segments[i], file)) {
+				ok = false;
+				break;
+			}
+		}
+		if (!FlushFileBuffers(file)) {
+			ok = false;
+		}
+		CloseHandle(file);
+		// Replacing only after a full flush keeps the previous snapshot intact
+		// if the app is terminated while an update is being written.
+		if (!ok || !MoveFileEx(temporaryPath, recoverySnapshotPath,
+			MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+			DeleteFile(temporaryPath);
+		}
+	}
+
 	void drainPendingLines() {
 		std::vector<std::wstring> lines;
 		LONG dropped = 0;
@@ -273,6 +372,16 @@ namespace {
 				currentFileDirty = false;
 				lastFlushTick = now;
 			}
+			AcquireSRWLockExclusive(&recoveryLock);
+			if (autoRecoveryEnabled && now - lastRecoverySnapshotTick >= RECOVERY_SNAPSHOT_INTERVAL_MS) {
+				if (currentFile != INVALID_HANDLE_VALUE && currentFileDirty) {
+					FlushFileBuffers(currentFile);
+					currentFileDirty = false;
+				}
+				refreshRecoverySnapshot();
+				lastRecoverySnapshotTick = now;
+			}
+			ReleaseSRWLockExclusive(&recoveryLock);
 
 			const ULONGLONG wallClockBucket = getCurrentBucket();
 			if (wallClockBucket != lastCleanupBucket) {
@@ -523,6 +632,7 @@ bool DiagnosticLog::initialize() {
 	if (initialized) {
 		return true;
 	}
+	InterlockedExchange(&autoRecoveryEnabled, OpenKeyHelper::getRegInt(AUTO_RECOVERY_SETTING, 1) ? 1 : 0);
 	if (!buildLogDirectory()) {
 		return false;
 	}
@@ -549,10 +659,15 @@ bool DiagnosticLog::initialize() {
 	stopRequested = false;
 	flushRequested = false;
 	lastFlushTick = GetTickCount64();
+	lastRecoverySnapshotTick = lastFlushTick;
 	lastCleanupBucket = getCurrentBucket();
 	currentFileDirty = false;
+	if (autoRecoveryEnabled) {
+		createRecoverySnapshot();
+	}
 	writerThread = CreateThread(NULL, 0, writerThreadProc, NULL, 0, NULL);
 	if (!writerThread) {
+		discardRecoverySnapshot();
 		CloseHandle(wakeEvent);
 		CloseHandle(flushDoneEvent);
 		wakeEvent = NULL;
@@ -581,6 +696,7 @@ void DiagnosticLog::shutdown() {
 	WaitForSingleObject(writerThread, INFINITE);
 
 	CrashHandler::shutdown();
+	discardRecoverySnapshot();
 	CloseHandle(writerThread);
 	CloseHandle(wakeEvent);
 	CloseHandle(flushDoneEvent);
@@ -590,6 +706,33 @@ void DiagnosticLog::shutdown() {
 	initialized = false;
 	removeSessionMarker();
 	DeleteCriticalSection(&queueLock);
+}
+
+bool DiagnosticLog::isAutoRecoveryEnabled() {
+	return InterlockedCompareExchange(&autoRecoveryEnabled, 0, 0) != 0;
+}
+
+bool DiagnosticLog::setAutoRecoveryEnabled(bool enabled) {
+	OpenKeyHelper::setRegInt(AUTO_RECOVERY_SETTING, enabled ? 1 : 0);
+	if (!initialized) {
+		InterlockedExchange(&autoRecoveryEnabled, enabled ? 1 : 0);
+		return true;
+	}
+	AcquireSRWLockExclusive(&recoveryLock);
+	const bool wasEnabled = autoRecoveryEnabled != 0;
+	InterlockedExchange(&autoRecoveryEnabled, enabled ? 1 : 0);
+	bool success = true;
+	if (!enabled) {
+		success = discardRecoverySnapshot();
+	} else if (!recoverySnapshotPath[0]) {
+		createRecoverySnapshot();
+		lastRecoverySnapshotTick = 0; // Refresh on the next writer wake-up.
+	} else if (!wasEnabled) {
+		lastRecoverySnapshotTick = 0;
+	}
+	ReleaseSRWLockExclusive(&recoveryLock);
+	SetEvent(wakeEvent);
+	return success;
 }
 
 void DiagnosticLog::log(const wchar_t* category, const wchar_t* message) {

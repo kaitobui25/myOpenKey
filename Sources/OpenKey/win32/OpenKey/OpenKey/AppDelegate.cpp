@@ -203,6 +203,7 @@ void AppDelegate::onInputMethodChangedFromHotKey() {
 }
 
 void AppDelegate::onDefaultConfig() {
+	DiagnosticLog::setAutoRecoveryEnabled(true);
 	APP_SET_DATA(vLanguage, 1);
 	APP_SET_DATA(vInputType, 0);
 	vFreeMark = 0;

@@ -21,4 +21,6 @@ namespace DiagnosticLog {
 	void log(const wchar_t* category, const wchar_t* message);
 	void logf(const wchar_t* category, const wchar_t* format, ...);
 	bool exportRecentTo(const std::wstring& path);
+	bool isAutoRecoveryEnabled();
+	bool setAutoRecoveryEnabled(bool enabled);
 }
