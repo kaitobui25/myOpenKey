@@ -254,7 +254,7 @@ BEGIN
     CONTROL         "Hỗ trợ ứng dụng Metro",IDC_CHECK_SUPPORT_METRO_APP,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,12,119,10
     CONTROL         "Tự lưu log khi OpenKey bị lỗi (Downloads)",IDC_CHECK_AUTO_RECOVERY_LOG,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,115,275,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,106,275,10
 END
 
 IDD_DIALOG_OLD DIALOGEX 0, 0, 316, 268

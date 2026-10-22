@@ -589,7 +589,10 @@ void MainControlDialog::onCheckboxClicked(const HWND& hWnd) {
     }
     else if (hWnd == checkAutoRecoveryLog) {
         val = (int)SendMessage(hWnd, BM_GETCHECK, 0, 0);
-        DiagnosticLog::setAutoRecoveryEnabled(val != 0);
+        if (!DiagnosticLog::setAutoRecoveryEnabled(val != 0)) {
+            MessageBox(hDlg, _T("Không thể xóa log hiện tại khỏi Downloads. Hãy đóng ứng dụng đang mở file log."),
+                _T("OpenKey Diagnostic Log"), MB_OK | MB_ICONWARNING);
+        }
     }
     SystemTrayHelper::updateData();
 }

@@ -135,17 +135,20 @@ namespace {
 		CloseHandle(file);
 	}
 
-	void discardRecoverySnapshot() {
+	bool discardRecoverySnapshot() {
 		if (!recoverySnapshotPath[0]) {
-			return;
+			return true;
 		}
 		wchar_t temporaryPath[MAX_PATH] = { 0 };
 		if (_snwprintf_s(temporaryPath, _countof(temporaryPath), _TRUNCATE,
 			L"%s.tmp", recoverySnapshotPath) >= 0) {
 			DeleteFile(temporaryPath);
 		}
-		DeleteFile(recoverySnapshotPath);
-		recoverySnapshotPath[0] = 0;
+		if (DeleteFile(recoverySnapshotPath) || GetLastError() == ERROR_FILE_NOT_FOUND) {
+			recoverySnapshotPath[0] = 0;
+			return true;
+		}
+		return false;
 	}
 
 	bool buildSegmentPath(const ULONGLONG bucket, wchar_t* path, const size_t pathCount) {
@@ -709,23 +712,27 @@ bool DiagnosticLog::isAutoRecoveryEnabled() {
 	return InterlockedCompareExchange(&autoRecoveryEnabled, 0, 0) != 0;
 }
 
-void DiagnosticLog::setAutoRecoveryEnabled(bool enabled) {
+bool DiagnosticLog::setAutoRecoveryEnabled(bool enabled) {
 	OpenKeyHelper::setRegInt(AUTO_RECOVERY_SETTING, enabled ? 1 : 0);
 	if (!initialized) {
 		InterlockedExchange(&autoRecoveryEnabled, enabled ? 1 : 0);
-		return;
+		return true;
 	}
 	AcquireSRWLockExclusive(&recoveryLock);
 	const bool wasEnabled = autoRecoveryEnabled != 0;
 	InterlockedExchange(&autoRecoveryEnabled, enabled ? 1 : 0);
+	bool success = true;
 	if (!enabled) {
-		discardRecoverySnapshot();
-	} else if (!wasEnabled || !recoverySnapshotPath[0]) {
+		success = discardRecoverySnapshot();
+	} else if (!recoverySnapshotPath[0]) {
 		createRecoverySnapshot();
 		lastRecoverySnapshotTick = 0; // Refresh on the next writer wake-up.
+	} else if (!wasEnabled) {
+		lastRecoverySnapshotTick = 0;
 	}
 	ReleaseSRWLockExclusive(&recoveryLock);
 	SetEvent(wakeEvent);
+	return success;
 }
 
 void DiagnosticLog::log(const wchar_t* category, const wchar_t* message) {
