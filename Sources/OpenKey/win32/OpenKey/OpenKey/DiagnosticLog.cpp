@@ -32,6 +32,9 @@ namespace {
 	const DWORD MAX_EXPORTED_SEGMENT_BYTES = 2 * 1024 * 1024;
 	const ULONGLONG MAX_ABNORMAL_ARCHIVE_BYTES = 64ULL * 1024 * 1024;
 
+	const wchar_t* AUTO_RECOVERY_SETTING = L"autoRecoveryLogEnabled";
+	SRWLOCK recoveryLock = SRWLOCK_INIT;
+	volatile LONG autoRecoveryEnabled = 1;
 	CRITICAL_SECTION queueLock;
 	HANDLE wakeEvent = NULL;
 	HANDLE flushDoneEvent = NULL;
@@ -130,6 +133,19 @@ namespace {
 		writeAll(file, reinterpret_cast<const BYTE*>(header), sizeof(header) - 1);
 		FlushFileBuffers(file);
 		CloseHandle(file);
+	}
+
+	void discardRecoverySnapshot() {
+		if (!recoverySnapshotPath[0]) {
+			return;
+		}
+		wchar_t temporaryPath[MAX_PATH] = { 0 };
+		if (_snwprintf_s(temporaryPath, _countof(temporaryPath), _TRUNCATE,
+			L"%s.tmp", recoverySnapshotPath) >= 0) {
+			DeleteFile(temporaryPath);
+		}
+		DeleteFile(recoverySnapshotPath);
+		recoverySnapshotPath[0] = 0;
 	}
 
 	bool buildSegmentPath(const ULONGLONG bucket, wchar_t* path, const size_t pathCount) {
@@ -353,7 +369,8 @@ namespace {
 				currentFileDirty = false;
 				lastFlushTick = now;
 			}
-			if (now - lastRecoverySnapshotTick >= RECOVERY_SNAPSHOT_INTERVAL_MS) {
+			AcquireSRWLockExclusive(&recoveryLock);
+			if (autoRecoveryEnabled && now - lastRecoverySnapshotTick >= RECOVERY_SNAPSHOT_INTERVAL_MS) {
 				if (currentFile != INVALID_HANDLE_VALUE && currentFileDirty) {
 					FlushFileBuffers(currentFile);
 					currentFileDirty = false;
@@ -361,6 +378,7 @@ namespace {
 				refreshRecoverySnapshot();
 				lastRecoverySnapshotTick = now;
 			}
+			ReleaseSRWLockExclusive(&recoveryLock);
 
 			const ULONGLONG wallClockBucket = getCurrentBucket();
 			if (wallClockBucket != lastCleanupBucket) {
@@ -611,6 +629,7 @@ bool DiagnosticLog::initialize() {
 	if (initialized) {
 		return true;
 	}
+	InterlockedExchange(&autoRecoveryEnabled, OpenKeyHelper::getRegInt(AUTO_RECOVERY_SETTING, 1) ? 1 : 0);
 	if (!buildLogDirectory()) {
 		return false;
 	}
@@ -640,13 +659,12 @@ bool DiagnosticLog::initialize() {
 	lastRecoverySnapshotTick = lastFlushTick;
 	lastCleanupBucket = getCurrentBucket();
 	currentFileDirty = false;
-	createRecoverySnapshot();
+	if (autoRecoveryEnabled) {
+		createRecoverySnapshot();
+	}
 	writerThread = CreateThread(NULL, 0, writerThreadProc, NULL, 0, NULL);
 	if (!writerThread) {
-		if (recoverySnapshotPath[0]) {
-			DeleteFile(recoverySnapshotPath);
-			recoverySnapshotPath[0] = 0;
-		}
+		discardRecoverySnapshot();
 		CloseHandle(wakeEvent);
 		CloseHandle(flushDoneEvent);
 		wakeEvent = NULL;
@@ -675,10 +693,7 @@ void DiagnosticLog::shutdown() {
 	WaitForSingleObject(writerThread, INFINITE);
 
 	CrashHandler::shutdown();
-	if (recoverySnapshotPath[0]) {
-		DeleteFile(recoverySnapshotPath);
-		recoverySnapshotPath[0] = 0;
-	}
+	discardRecoverySnapshot();
 	CloseHandle(writerThread);
 	CloseHandle(wakeEvent);
 	CloseHandle(flushDoneEvent);
@@ -688,6 +703,29 @@ void DiagnosticLog::shutdown() {
 	initialized = false;
 	removeSessionMarker();
 	DeleteCriticalSection(&queueLock);
+}
+
+bool DiagnosticLog::isAutoRecoveryEnabled() {
+	return InterlockedCompareExchange(&autoRecoveryEnabled, 0, 0) != 0;
+}
+
+void DiagnosticLog::setAutoRecoveryEnabled(bool enabled) {
+	OpenKeyHelper::setRegInt(AUTO_RECOVERY_SETTING, enabled ? 1 : 0);
+	if (!initialized) {
+		InterlockedExchange(&autoRecoveryEnabled, enabled ? 1 : 0);
+		return;
+	}
+	AcquireSRWLockExclusive(&recoveryLock);
+	const bool wasEnabled = autoRecoveryEnabled != 0;
+	InterlockedExchange(&autoRecoveryEnabled, enabled ? 1 : 0);
+	if (!enabled) {
+		discardRecoverySnapshot();
+	} else if (!wasEnabled || !recoverySnapshotPath[0]) {
+		createRecoverySnapshot();
+		lastRecoverySnapshotTick = 0; // Refresh on the next writer wake-up.
+	}
+	ReleaseSRWLockExclusive(&recoveryLock);
+	SetEvent(wakeEvent);
 }
 
 void DiagnosticLog::log(const wchar_t* category, const wchar_t* message) {

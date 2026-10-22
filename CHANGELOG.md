@@ -2,6 +2,10 @@
 
 ##### OpenKey for Linux: (in development)
 
+##### Custom Build Win32 26.4: (23/10/2026) - kaitobui25 fork
+- **Toggle recovery logging:** Added `Tự lưu log khi OpenKey bị lỗi (Downloads)` to the Hệ thống settings tab. Checked by default to preserve v26.3 behavior; the choice persists across restarts.
+- **Immediate effect:** Unchecking stops automatic Downloads snapshots and removes the current recovery log. Checking resumes snapshots; existing manual `Xuất log...` and local crash dumps are unaffected.
+
 ##### Custom Build Win32 26.3: (21/10/2026) - kaitobui25 fork
 - **Automatic recovery log in Downloads:** While OpenKey is running, an asynchronously refreshed file named `OpenKey-v26.3-recovery_YYYYMMDD_HHMMSS_pidNNNN.log` contains the latest 5 minutes of diagnostic events.
 - **Retained after abnormal termination:** When Windows force-closes a hung OpenKey or an unhandled exception terminates it, the latest completed log snapshot remains in the user's Windows Downloads folder. This also works if OpenKey is never restarted.
